@@ -1,0 +1,45 @@
+# Task 3: BraTS-style protocol
+# Train: random 96³ patches | Val (early stop): center patch | Test/report: sliding-window full volume
+data_root: outputs_task1/outputs_task1/processed_2d
+metadata_path: outputs_task1/outputs_task1/metadata.json
+splits_path: splits_patient_seed42.json
+
+split_ratios: [0.7, 0.1, 0.2]
+split_seed: 42
+
+modalities: [t1n, t1c, t2w, t2f]
+num_classes: 4
+
+use_full_volume: false
+eval_sliding_window: true
+sliding_window_stride: 48
+patch_size: [96, 96, 96]
+volume_shape: [155, 177, 219]
+train_samples_per_patient: 2
+
+device: cuda
+require_gpu: true
+use_compile: false
+channels_last: true
+
+batch_size: 4
+accum_steps: 1
+num_workers: 2
+prefetch_factor: 2
+persistent_workers: true
+
+optimizer: adam
+lr: 0.001
+weight_decay: 0.00001
+
+max_epochs: 300
+early_stop_patience: 30
+early_stop_min_delta: 0.001
+scheduler: plateau
+scheduler_patience: 10
+scheduler_factor: 0.5
+
+loss_ce_weight: 1.0
+loss_dice_weight: 1.0
+
+max_patients: null
