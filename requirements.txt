@@ -1,0 +1,6 @@
+monai>=1.4
+numpy
+scipy
+pyyaml
+tqdm
+matplotlib

@@ -118,6 +118,7 @@ def main() -> None:
         use_full_volume=bool(cfg.get("use_full_volume", False)),
         pad_factor=int(cfg.get("pad_factor", 16)),
         slice_load_threads=int(cfg.get("slice_load_threads", 8)),
+        augment_config=cfg.get("augmentation"),
     )
     if ds_kw["use_full_volume"]:
         print(f"dataset: full volume (pad_factor={ds_kw['pad_factor']}), batch_size=1 recommended")

@@ -139,10 +139,11 @@ def main() -> None:
 
     data_root = Path(cfg["data_root"])
     available = {p.name for p in data_root.iterdir() if p.is_dir()}
+    available.update(p.stem for p in data_root.glob("*.npz"))
     patients = [p for p in patients if p in available]
     missing = len(meta["patients"]) - len(patients)
     if missing:
-        print(f"warning: {missing} patients in metadata but no processed_2d folder")
+        print(f"warning: {missing} patients in metadata but no processed data")
 
     ratios = cfg.get("split_ratios", [0.7, 0.1, 0.2])
     seed = int(cfg.get("split_seed", 42))

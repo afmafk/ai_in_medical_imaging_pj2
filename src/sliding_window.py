@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from dataset.brats_multimodal import load_patient_volume
+from dataset.brats_multimodal import load_patient_volume_from_root
 from metrics import compute_region_metrics_from_seg, compute_region_metrics_hd95_from_seg
 
 
@@ -70,7 +70,7 @@ def evaluate_patients_sliding_window(
     agg: dict[str, float] = {}
     n = 0
     for pid in tqdm(patient_ids, desc="sliding-window"):
-        image, seg = load_patient_volume(root / pid)
+        image, seg = load_patient_volume_from_root(root, pid)
         pred = sliding_window_predict(model, image, patch_size, stride, num_classes, device)
         if with_hd95:
             m = compute_region_metrics_hd95_from_seg(pred, seg)

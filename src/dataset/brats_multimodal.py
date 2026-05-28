@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import random
 from concurrent.futures import ThreadPoolExecutor
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Literal
 
@@ -17,6 +18,10 @@ def _slice_path(patient_dir: Path, z: int) -> Path:
     return patient_dir / f"slice_{z:03d}.npz"
 
 
+def _volume_path(data_root: Path, patient_id: str) -> Path:
+    return data_root / f"{patient_id}.npz"
+
+
 def get_patient_depth(patient_dir: Path) -> int:
     """Fast depth count without loading arrays."""
     n = 0
@@ -25,6 +30,15 @@ def get_patient_depth(patient_dir: Path) -> int:
     if n == 0:
         raise FileNotFoundError(f"No slices in {patient_dir}")
     return n
+
+
+def get_patient_depth_from_root(data_root: Path, patient_id: str) -> int:
+    """Depth for either processed_3d .npz files or processed_2d slice folders."""
+    volume_path = _volume_path(data_root, patient_id)
+    if volume_path.exists():
+        data = np.load(volume_path)
+        return int(data["image"].shape[-1])
+    return get_patient_depth(data_root / patient_id)
 
 
 def _load_one_slice(
@@ -85,6 +99,41 @@ def load_patient_volume(patient_dir: Path) -> tuple[np.ndarray, np.ndarray]:
     return load_z_patch(patient_dir, 0, depth, 0, h, 0, w)
 
 
+def load_patient_volume_from_root(data_root: str | Path, patient_id: str) -> tuple[np.ndarray, np.ndarray]:
+    """Load a full volume from processed_3d .npz or processed_2d slice folders."""
+    root = Path(data_root)
+    volume_path = _volume_path(root, patient_id)
+    if volume_path.exists():
+        data = np.load(volume_path)
+        image = data["image"].astype(np.float32)  # (4,H,W,D)
+        seg = data["seg"].astype(np.uint8)  # (H,W,D)
+        return image.transpose(0, 3, 1, 2), seg.transpose(2, 0, 1)
+    return load_patient_volume(root / patient_id)
+
+
+def load_z_patch_from_root(
+    data_root: str | Path,
+    patient_id: str,
+    z0: int,
+    depth: int,
+    y0: int,
+    height: int,
+    x0: int,
+    width: int,
+    slice_threads: int = 1,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Load a cropped 3D patch from either storage layout."""
+    root = Path(data_root)
+    volume_path = _volume_path(root, patient_id)
+    if volume_path.exists():
+        image, seg = load_patient_volume_from_root(root, patient_id)
+        return (
+            image[:, z0 : z0 + depth, y0 : y0 + height, x0 : x0 + width],
+            seg[z0 : z0 + depth, y0 : y0 + height, x0 : x0 + width],
+        )
+    return load_z_patch(root / patient_id, z0, depth, y0, height, x0, width, slice_threads)
+
+
 def pad_volume(
     image: np.ndarray,
     seg: np.ndarray,
@@ -134,6 +183,7 @@ class BraTS3DPatchDataset(Dataset):
         use_full_volume: bool = True,
         pad_factor: int = 16,
         slice_load_threads: int = 8,
+        augment_config: Mapping[str, object] | None = None,
     ) -> None:
         self.data_root = Path(data_root)
         self.patient_ids = list(patient_ids)
@@ -142,6 +192,7 @@ class BraTS3DPatchDataset(Dataset):
         self.use_full_volume = use_full_volume
         self.pad_factor = pad_factor
         self.slice_load_threads = max(1, int(slice_load_threads))
+        self.augment_config = dict(augment_config) if augment_config else None
         self.require_tumor = require_tumor and split == "train"
         self.rng = random.Random(seed + hash(split) % 10000)
         self.vol_depth, self.vol_h, self.vol_w = volume_shape
@@ -168,7 +219,7 @@ class BraTS3DPatchDataset(Dataset):
         """Lazy depth cache (safe with Windows DataLoader worker pickle)."""
         if self._patient_depths is None:
             self._patient_depths = {
-                pid: get_patient_depth(self.data_root / pid) for pid in self.patient_ids
+                pid: get_patient_depth_from_root(self.data_root, pid) for pid in self.patient_ids
             }
         return self._patient_depths[patient_id]
 
@@ -180,14 +231,14 @@ class BraTS3DPatchDataset(Dataset):
         self.__dict__.update(state)
         if self._patient_depths is None and self.patient_ids:
             self._patient_depths = {
-                pid: get_patient_depth(self.data_root / pid) for pid in self.patient_ids
+                pid: get_patient_depth_from_root(self.data_root, pid) for pid in self.patient_ids
             }
 
     def _load_full_volume(self, patient_id: str) -> tuple[np.ndarray, np.ndarray]:
-        image, seg = load_patient_volume(self.data_root / patient_id)
+        image, seg = load_patient_volume_from_root(self.data_root, patient_id)
         image, seg = pad_volume(image, seg, self.pad_factor)
         if self.split == "train":
-            image, seg = augment_volume(image, seg, self.rng)
+            image, seg = augment_volume(image, seg, self.rng, self.augment_config)
         return image, seg
 
     def _load_patch(self, patient_id: str) -> tuple[np.ndarray, np.ndarray]:
@@ -201,14 +252,24 @@ class BraTS3DPatchDataset(Dataset):
                 z0, y0, x0 = random_crop_coords(
                     depth, self.vol_h, self.vol_w, self.patch_size, self.rng
                 )
-                image, seg = load_z_patch(patient_dir, z0, pd, y0, ph, x0, pw, **load_kw)
+                image, seg = load_z_patch_from_root(
+                    self.data_root, patient_id, z0, pd, y0, ph, x0, pw, **load_kw
+                )
                 if not self.require_tumor or (seg > 0).any():
                     break
-            image, seg = augment_volume(image, seg, self.rng)
+            image, seg = augment_volume(image, seg, self.rng, self.augment_config)
         else:
             z0 = min(self._fixed_z, max(0, depth - pd))
-            image, seg = load_z_patch(
-                patient_dir, z0, pd, self._fixed_y, ph, self._fixed_x, pw, **load_kw
+            image, seg = load_z_patch_from_root(
+                self.data_root,
+                patient_id,
+                z0,
+                pd,
+                self._fixed_y,
+                ph,
+                self._fixed_x,
+                pw,
+                **load_kw,
             )
         return image, seg
 
