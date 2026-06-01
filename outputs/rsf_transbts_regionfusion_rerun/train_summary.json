@@ -1,0 +1,7 @@
+{
+  "model": "rsf_transbts",
+  "best_epoch": 40,
+  "best_val_mean_dice": 0.9211607629050772,
+  "stopped_epoch": 70,
+  "checkpoint": "outputs/rsf_transbts_regionfusion_rerun/checkpoints/best.ckpt"
+}

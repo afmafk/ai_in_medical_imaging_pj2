@@ -140,6 +140,11 @@ def main() -> None:
     data_root = Path(cfg["data_root"])
     available = {p.name for p in data_root.iterdir() if p.is_dir()}
     available.update(p.stem for p in data_root.glob("*.npz"))
+    available.update(
+        p.name.removesuffix("_image.npy")
+        for p in data_root.glob("*_image.npy")
+        if (data_root / f"{p.name.removesuffix('_image.npy')}_seg.npy").exists()
+    )
     patients = [p for p in patients if p in available]
     missing = len(meta["patients"]) - len(patients)
     if missing:

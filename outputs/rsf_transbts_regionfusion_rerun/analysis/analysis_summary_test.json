@@ -1,0 +1,22 @@
+{
+  "model": "rsf_transbts",
+  "split": "test",
+  "num_cases": 127,
+  "num_inf_hd95_WT": 0,
+  "num_inf_hd95_TC": 0,
+  "num_inf_hd95_ET": 0,
+  "worst_mean_dice_cases": [
+    "BraTS-GLI-00621-000",
+    "BraTS-GLI-00321-000",
+    "BraTS-GLI-00331-000",
+    "BraTS-GLI-00684-000",
+    "BraTS-GLI-00525-001"
+  ],
+  "worst_wt_hd95_cases": [
+    "BraTS-GLI-00675-001",
+    "BraTS-GLI-00733-001",
+    "BraTS-GLI-00321-000",
+    "BraTS-GLI-00459-000",
+    "BraTS-GLI-00604-000"
+  ]
+}

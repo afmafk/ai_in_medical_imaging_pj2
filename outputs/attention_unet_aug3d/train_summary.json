@@ -1,0 +1,7 @@
+{
+  "model": "attention_unet",
+  "best_epoch": 82,
+  "best_val_mean_dice": 0.9145777857443541,
+  "stopped_epoch": 100,
+  "checkpoint": "outputs/attention_unet_aug3d/checkpoints/best.ckpt"
+}

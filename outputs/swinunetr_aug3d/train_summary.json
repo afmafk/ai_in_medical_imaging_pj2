@@ -1,0 +1,7 @@
+{
+  "model": "swinunetr",
+  "best_epoch": 79,
+  "best_val_mean_dice": 0.9090904189814779,
+  "stopped_epoch": 100,
+  "checkpoint": "outputs/swinunetr_aug3d/checkpoints/best.ckpt"
+}

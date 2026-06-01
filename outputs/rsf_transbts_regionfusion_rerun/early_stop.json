@@ -1,0 +1,8 @@
+{
+  "best_score": 0.9211607629050772,
+  "best_epoch": 40,
+  "counter": 6,
+  "stopped_epoch": 70,
+  "patience": 6,
+  "min_delta": 0.001
+}

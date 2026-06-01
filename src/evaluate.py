@@ -18,7 +18,6 @@ from device_utils import configure_cuda, resolve_device
 from dataset.brats_multimodal import BraTS3DPatchDataset, load_split_patient_ids
 from metrics import compute_region_metrics, compute_region_metrics_hd95
 from models import MODEL_NAMES, build_model
-from models.swinunetr_v2 import ensure_patch_size_divisible_by_32
 from sliding_window import evaluate_patients_sliding_window
 
 
@@ -47,6 +46,7 @@ def main() -> None:
     parser.add_argument("--split", type=str, default="test", choices=["train", "val", "test"])
     parser.add_argument("--config", type=str, default=None)
     parser.add_argument("--checkpoint", type=str, default=None)
+    parser.add_argument("--output-dir", type=str, default=None)
     parser.add_argument("--hd95", action="store_true")
     parser.add_argument("--max-patients", type=int, default=None)
     parser.add_argument("--device", type=str, default=None)
@@ -79,12 +79,14 @@ def main() -> None:
 
     patch_size = tuple(cfg.get("patch_size", [96, 96, 96]))
     if args.model == "swinunetr":
+        from models.swinunetr_v2 import ensure_patch_size_divisible_by_32
+
         ensure_patch_size_divisible_by_32(patch_size)
     use_sliding = args.sliding_window or (
         not args.patch_only and bool(cfg.get("eval_sliding_window", True)) and not cfg.get("use_full_volume", False)
     )
 
-    model_cfg = cfg.get("swinunetr") if args.model == "swinunetr" else None
+    model_cfg = cfg.get(args.model)
     model = build_model(
         args.model,
         in_channels=4,
@@ -121,7 +123,8 @@ def main() -> None:
         print(f"eval: center patch {patch_size} patients={len(patient_ids)}")
         metrics = evaluate_split(model, loader, device, with_hd95=args.hd95)
 
-    out_dir = ROOT / "outputs" / args.model
+    out_dir = Path(args.output_dir) if args.output_dir else ROOT / "outputs" / args.model
+    out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"metrics_{args.split}.json"
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2)

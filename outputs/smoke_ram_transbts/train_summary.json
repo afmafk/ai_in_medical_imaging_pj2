@@ -1,0 +1,7 @@
+{
+  "model": "ram_transbts",
+  "best_epoch": 1,
+  "best_val_mean_dice": 0.09653544208537101,
+  "stopped_epoch": 1,
+  "checkpoint": "outputs\\smoke_ram_transbts\\checkpoints\\best.ckpt"
+}

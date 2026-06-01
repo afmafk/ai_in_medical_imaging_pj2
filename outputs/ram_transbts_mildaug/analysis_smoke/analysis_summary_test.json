@@ -1,0 +1,14 @@
+{
+  "model": "ram_transbts",
+  "split": "test",
+  "num_cases": 1,
+  "num_inf_hd95_WT": 0,
+  "num_inf_hd95_TC": 0,
+  "num_inf_hd95_ET": 0,
+  "worst_mean_dice_cases": [
+    "BraTS-GLI-00005-000"
+  ],
+  "worst_wt_hd95_cases": [
+    "BraTS-GLI-00005-000"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "model": "transbts",
+  "best_epoch": 97,
+  "best_val_mean_dice": 0.9216481008757618,
+  "stopped_epoch": 100,
+  "checkpoint": "outputs/transbts_aug3d/checkpoints/best.ckpt"
+}

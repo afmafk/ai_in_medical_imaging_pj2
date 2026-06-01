@@ -45,6 +45,7 @@ def sliding_window_predict(
         for y0 in y_starts:
             for x0 in x_starts:
                 patch = volume[:, z0 : z0 + pd, y0 : y0 + ph, x0 : x0 + pw]
+                patch = np.array(patch, dtype=np.float32, copy=True, order="C")
                 logits = model(torch.from_numpy(patch).unsqueeze(0).to(device))[0]
                 logits_np = logits.cpu().numpy()
                 logits_sum[:, z0 : z0 + pd, y0 : y0 + ph, x0 : x0 + pw] += logits_np

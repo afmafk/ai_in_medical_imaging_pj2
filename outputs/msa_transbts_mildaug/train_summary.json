@@ -1,0 +1,7 @@
+{
+  "model": "msa_transbts",
+  "best_epoch": 99,
+  "best_val_mean_dice": 0.9240459376149222,
+  "stopped_epoch": 100,
+  "checkpoint": "outputs/msa_transbts_mildaug/checkpoints/best.ckpt"
+}

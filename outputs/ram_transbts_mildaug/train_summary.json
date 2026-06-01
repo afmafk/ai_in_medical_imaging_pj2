@@ -1,0 +1,7 @@
+{
+  "model": "ram_transbts",
+  "best_epoch": 99,
+  "best_val_mean_dice": 0.918467725813768,
+  "stopped_epoch": 100,
+  "checkpoint": "outputs/ram_transbts_mildaug/checkpoints/best.ckpt"
+}

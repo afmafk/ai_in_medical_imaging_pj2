@@ -1,0 +1,2 @@
+epoch,train_loss,val_dice_wt,val_dice_tc,val_dice_et,val_mean_dice,lr,early_stop_counter
+1,2.233610,0.2860,0.0092,0.0099,0.1017,0.001,0
