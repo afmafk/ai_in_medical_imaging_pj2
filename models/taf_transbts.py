@@ -116,27 +116,35 @@ class CorrelationDescription3D(nn.Module):
         nn.init.zeros_(self.mlp[-1].bias)
 
     def forward(self, source: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        source_context = source.mean(dim=(2, 3, 4))
-        # The target modality is a teacher signal. Detaching its context avoids
-        # a shortcut where the encoder deforms both sides instead of learning
-        # the source-to-target correlation in this adapter.
-        target_context = target.detach().mean(dim=(2, 3, 4))
-        linear, quadratic, bias = self.mlp(
-            torch.cat([source_context, target_context], dim=1)
-        ).chunk(3, dim=1)
-        shape = (source.shape[0], source.shape[1], 1, 1, 1)
-        linear = 1.0 + 0.1 * torch.tanh(linear).view(shape)
-        quadratic = 0.1 * torch.tanh(quadratic).view(shape)
-        bias = 0.1 * torch.tanh(bias).view(shape)
-        return linear * source + quadratic * source.square() + bias
+        # Quadratic latent mappings are vulnerable to FP16 overflow. Keep this
+        # regularization path in FP32 and bound its polynomial input while the
+        # segmentation path retains the original feature representation.
+        with torch.autocast(device_type=source.device.type, enabled=False):
+            source_fp32 = source.float().clamp(-8.0, 8.0)
+            target_fp32 = target.detach().float()
+            source_context = source_fp32.mean(dim=(2, 3, 4))
+            target_context = target_fp32.mean(dim=(2, 3, 4))
+            linear, quadratic, bias = self.mlp(
+                torch.cat([source_context, target_context], dim=1)
+            ).chunk(3, dim=1)
+            shape = (source.shape[0], source.shape[1], 1, 1, 1)
+            linear = 1.0 + 0.05 * torch.tanh(linear).view(shape)
+            quadratic = 0.02 * torch.tanh(quadratic).view(shape)
+            bias = 0.05 * torch.tanh(bias).view(shape)
+            return linear * source_fp32 + quadratic * source_fp32.square() + bias
 
 
-def _symmetric_kl(
+def _scale_gradient(x: torch.Tensor, scale: float) -> torch.Tensor:
+    """Keep the forward value while scaling only its backward gradient."""
+    return x.detach() + float(scale) * (x - x.detach())
+
+
+def _teacher_kl(
     predicted: torch.Tensor,
     target: torch.Tensor,
     temperature: float,
 ) -> torch.Tensor:
-    """Symmetric KL against a stop-gradient target feature distribution."""
+    """KL from a stop-gradient target distribution to the predicted one."""
     predicted = predicted.float().flatten(1)
     target = target.detach().float().flatten(1)
     predicted = (predicted - predicted.mean(dim=1, keepdim=True)) / (
@@ -146,13 +154,8 @@ def _symmetric_kl(
         target.std(dim=1, keepdim=True) + 1e-6
     )
     pred_log = F.log_softmax(predicted / temperature, dim=1)
-    tgt_log = F.log_softmax(target / temperature, dim=1)
-    pred_prob = pred_log.exp()
-    tgt_prob = tgt_log.exp()
-    return 0.5 * (
-        F.kl_div(pred_log, tgt_prob, reduction="batchmean")
-        + F.kl_div(tgt_log, pred_prob, reduction="batchmean")
-    )
+    tgt_prob = F.softmax(target / temperature, dim=1)
+    return F.kl_div(pred_log, tgt_prob, reduction="batchmean")
 
 
 class TriAttentionFusion3D(nn.Module):
@@ -165,10 +168,12 @@ class TriAttentionFusion3D(nn.Module):
         channels: int,
         num_modalities: int = 4,
         correlation_temperature: float = 1.0,
+        correlation_encoder_grad_scale: float = 0.05,
     ) -> None:
         super().__init__()
         self.dual_attention = DualAttentionFusion3D(channels, num_modalities)
         self.correlation_temperature = float(correlation_temperature)
+        self.correlation_encoder_grad_scale = float(correlation_encoder_grad_scale)
         self.pairs = self.DEFAULT_PAIRS
         self.adapters = nn.ModuleDict()
         for left, right in self.pairs:
@@ -178,19 +183,28 @@ class TriAttentionFusion3D(nn.Module):
     def forward(
         self,
         features: Sequence[torch.Tensor],
+        enabled: bool = True,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         fused, spatial_features, modality_weights, spatial_weights = self.dual_attention(features)
+        if not enabled:
+            return fused, fused.float().new_zeros(()), modality_weights, spatial_weights
         losses: list[torch.Tensor] = []
         for left, right in self.pairs:
-            left_feature = spatial_features[:, left]
-            right_feature = spatial_features[:, right]
+            left_feature = _scale_gradient(
+                spatial_features[:, left],
+                self.correlation_encoder_grad_scale,
+            )
+            right_feature = _scale_gradient(
+                spatial_features[:, right],
+                self.correlation_encoder_grad_scale,
+            )
             left_to_right = self.adapters[f"{left}_to_{right}"](left_feature, right_feature)
             right_to_left = self.adapters[f"{right}_to_{left}"](right_feature, left_feature)
             losses.append(
-                _symmetric_kl(left_to_right, right_feature, self.correlation_temperature)
+                _teacher_kl(left_to_right, right_feature, self.correlation_temperature)
             )
             losses.append(
-                _symmetric_kl(right_to_left, left_feature, self.correlation_temperature)
+                _teacher_kl(right_to_left, left_feature, self.correlation_temperature)
             )
         correlation_loss = torch.stack(losses).mean()
         return fused, correlation_loss, modality_weights, spatial_weights
@@ -207,6 +221,8 @@ class TAFTransBTS(nn.Module):
         transformer_depth: int = 2,
         transformer_heads: int = 8,
         correlation_temperature: float = 1.0,
+        correlation_encoder_grad_scale: float = 0.05,
+        correlation_enabled: bool = True,
     ) -> None:
         super().__init__()
         if in_channels != 4:
@@ -214,6 +230,7 @@ class TAFTransBTS(nn.Module):
         if (base * 8) % transformer_heads != 0:
             raise ValueError("base * 8 must be divisible by transformer_heads")
         self.in_channels = in_channels
+        self.correlation_enabled = bool(correlation_enabled)
         self.encoders = nn.ModuleList([ModalityEncoder3D(base) for _ in range(in_channels)])
         self.skip_fusions = nn.ModuleList(
             [
@@ -227,6 +244,7 @@ class TAFTransBTS(nn.Module):
             base * 8,
             in_channels,
             correlation_temperature=correlation_temperature,
+            correlation_encoder_grad_scale=correlation_encoder_grad_scale,
         )
         self.transformer = TransformerBottleneck(
             base * 8,
@@ -253,7 +271,8 @@ class TAFTransBTS(nn.Module):
             for level in range(4)
         ]
         bottom, correlation_loss, modality_weights, spatial_weights = self.tri_attention(
-            [features[4] for features in modality_levels]
+            [features[4] for features in modality_levels],
+            enabled=self.correlation_enabled,
         )
         bottleneck = self.transformer(bottom)
         e1, e2, e3, e4 = skip_features

@@ -1,6 +1,6 @@
-# TAF-TransBTS: four modality encoders + deepest tri-attention fusion.
-# Sized for a 40 GB CUDA GPU. Start with batch_size=4; use 2 with accum_steps=2
-# only if the actual cluster GPU has less memory than expected.
+# A4: numerically stabilized correlation-guided TAF-TransBTS.
+# Train this configuration from scratch. Do not initialize from checkpoints
+# produced by the earlier FP16 quadratic correlation implementation.
 data_root: outputs_task1/processed_3d
 metadata_path: outputs_task1/metadata.json
 splits_path: splits_patient_seed42.json
@@ -20,7 +20,6 @@ patch_size: [96, 96, 96]
 volume_shape: [155, 177, 219]
 train_samples_per_patient: 2
 
-# Keep the baseline augmentation protocol for a controlled architecture test.
 augmentation:
   flip_prob_hw: 0.5
   flip_prob_depth: 0.15
@@ -44,8 +43,6 @@ amp_dtype: bfloat16
 
 batch_size: 4
 accum_steps: 1
-# Compressed .npz input is CPU-heavy. Four persistent workers plus a small
-# per-worker LRU cache are usually steadier than aggressive I/O concurrency.
 num_workers: 4
 prefetch_factor: 2
 persistent_workers: true
@@ -56,20 +53,18 @@ optimizer: adam
 lr: 0.0005
 weight_decay: 0.00001
 
-max_epochs: 250
-early_stop_patience: 12
+max_epochs: 180
+early_stop_patience: 10
 early_stop_min_delta: 0.001
 scheduler: plateau
-scheduler_patience: 4
+scheduler_patience: 3
 scheduler_factor: 0.5
 
 loss_ce_weight: 1.0
 loss_dice_weight: 1.0
-# Let segmentation stabilize before introducing the correlation teacher loss.
-# The stop-gradient KL is intentionally conservative for the first rerun.
-loss_correlation_weight: 0.005
+loss_correlation_weight: 0.002
 loss_correlation_start_epoch: 30
-loss_correlation_warmup_epochs: 20
+loss_correlation_warmup_epochs: 30
 max_grad_norm: 5.0
 
 taf_transbts:

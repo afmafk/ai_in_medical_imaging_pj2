@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import random
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -76,20 +77,32 @@ def train_one_epoch(
     accum_steps: int,
     channels_last: bool = False,
     max_grad_norm: float = 0.0,
+    amp_dtype: torch.dtype = torch.float16,
 ) -> tuple[float, dict[str, float]]:
     model.train()
     running = 0.0
     detail_totals: dict[str, float] = {}
+    optimizer_steps = 0
+    skipped_optimizer_steps = 0
+    skipped_nonfinite_losses = 0
     optimizer.zero_grad(set_to_none=True)
     for step, batch in enumerate(tqdm(loader, desc="train", leave=False)):
         image = batch["image"].to(device, non_blocking=True)
         seg = batch["seg"].to(device, non_blocking=True)
         if channels_last and image.ndim == 5:
             image = image.to(memory_format=torch.channels_last_3d)
-        with autocast(device_type=device.type, enabled=device.type == "cuda"):
+        with autocast(
+            device_type=device.type,
+            enabled=device.type == "cuda",
+            dtype=amp_dtype,
+        ):
             outputs = model.forward_with_aux(image) if hasattr(model, "forward_with_aux") else model(image)
             loss, details = criterion(outputs, seg)
             loss = loss / accum_steps
+        if not torch.isfinite(loss):
+            skipped_nonfinite_losses += 1
+            optimizer.zero_grad(set_to_none=True)
+            continue
         scaler.scale(loss).backward()
         if (step + 1) % accum_steps == 0 or (step + 1) == len(loader):
             if max_grad_norm > 0:
@@ -98,17 +111,29 @@ def train_one_epoch(
                     model.parameters(),
                     max_norm=max_grad_norm,
                 )
-                detail_totals["grad_norm"] = detail_totals.get("grad_norm", 0.0) + float(
-                    grad_norm
-                )
-            scaler.step(optimizer)
+                grad_norm_value = float(grad_norm)
+                if torch.isfinite(grad_norm):
+                    detail_totals["grad_norm"] = detail_totals.get("grad_norm", 0.0) + grad_norm_value
+                    optimizer_steps += 1
+                    scaler.step(optimizer)
+                else:
+                    skipped_optimizer_steps += 1
+            else:
+                optimizer_steps += 1
+                scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad(set_to_none=True)
         running += loss.item() * accum_steps
         for key, value in details.items():
             detail_totals[key] = detail_totals.get(key, 0.0) + float(value)
     n = max(len(loader), 1)
-    return running / n, {key: value / n for key, value in detail_totals.items()}
+    details = {
+        key: value / (max(optimizer_steps, 1) if key == "grad_norm" else n)
+        for key, value in detail_totals.items()
+    }
+    details["skipped_optimizer_steps"] = float(skipped_optimizer_steps)
+    details["skipped_nonfinite_losses"] = float(skipped_nonfinite_losses)
+    return running / n, details
 
 
 def main() -> None:
@@ -124,9 +149,17 @@ def main() -> None:
         default=None,
         help="initialize model weights from a checkpoint but start a fresh optimizer and schedule",
     )
+    parser.add_argument(
+        "--resume-checkpoint",
+        type=str,
+        default=None,
+        help="resume model, optimizer, scheduler, and epoch numbering from a checkpoint",
+    )
     parser.add_argument("--device", type=str, default=None, help="cuda, cuda:0, cpu, auto")
     parser.add_argument("--require-gpu", action="store_true", help="fail if CUDA unavailable")
     args = parser.parse_args()
+    if args.init_checkpoint and args.resume_checkpoint:
+        parser.error("use either --init-checkpoint or --resume-checkpoint, not both")
 
     cfg = load_config(args.config)
     seed = int(cfg.get("seed", cfg.get("split_seed", 42)))
@@ -190,6 +223,15 @@ def main() -> None:
     require_gpu = args.require_gpu or bool(cfg.get("require_gpu", True))
     device = resolve_device(device_name, require_gpu=require_gpu)
     configure_cuda(device)
+    amp_dtype_name = str(cfg.get("amp_dtype", "float16")).lower()
+    if amp_dtype_name in ("bfloat16", "bf16"):
+        amp_dtype = torch.bfloat16
+    elif amp_dtype_name in ("float16", "fp16"):
+        amp_dtype = torch.float16
+    else:
+        raise ValueError("amp_dtype must be one of: float16, fp16, bfloat16, bf16")
+    if device.type == "cuda":
+        print(f"amp_dtype: {amp_dtype_name}")
     pin_memory = device.type == "cuda"
 
     nw = int(cfg.get("num_workers", 0))
@@ -239,7 +281,17 @@ def main() -> None:
     if use_compile and device.type == "cuda" and hasattr(torch, "compile"):
         model = torch.compile(model, mode="reduce-overhead")
         print("torch.compile enabled")
-    if args.init_checkpoint:
+    resume_ckpt = None
+    resume_epoch = 0
+    if args.resume_checkpoint:
+        resume_ckpt = torch.load(args.resume_checkpoint, map_location=device, weights_only=False)
+        model.load_state_dict(resume_ckpt["model_state"])
+        resume_epoch = int(resume_ckpt.get("epoch", 0))
+        print(
+            f"loaded resume checkpoint from {args.resume_checkpoint} "
+            f"(source_epoch={resume_epoch})"
+        )
+    elif args.init_checkpoint:
         init_ckpt = torch.load(args.init_checkpoint, map_location=device, weights_only=False)
         model.load_state_dict(init_ckpt["model_state"])
         print(
@@ -285,7 +337,19 @@ def main() -> None:
         min_delta=float(cfg.get("early_stop_min_delta", 0.001)),
         mode="max",
     )
-    scaler = GradScaler(device.type, enabled=device.type == "cuda")
+    if resume_ckpt is not None:
+        optimizer.load_state_dict(resume_ckpt["optimizer_state"])
+        if "scheduler_state" in resume_ckpt:
+            scheduler.load_state_dict(resume_ckpt["scheduler_state"])
+        resume_metrics = resume_ckpt.get("val_metrics") or {}
+        resume_score = resume_metrics.get("dice_mean")
+        if resume_score is not None:
+            early.step(float(resume_score), resume_epoch)
+        print(f"resumed optimizer and scheduler state at epoch {resume_epoch}")
+    scaler = GradScaler(
+        device.type,
+        enabled=device.type == "cuda" and amp_dtype == torch.float16,
+    )
 
     log_path = out_dir / "training_log.csv"
     with log_path.open("w", newline="", encoding="utf-8") as f:
@@ -297,6 +361,8 @@ def main() -> None:
                 "train_correlation_loss",
                 "train_weighted_correlation_loss",
                 "train_grad_norm",
+                "skipped_optimizer_steps",
+                "skipped_nonfinite_losses",
                 "val_dice_wt",
                 "val_dice_tc",
                 "val_dice_et",
@@ -314,8 +380,15 @@ def main() -> None:
     max_epochs = int(args.max_epochs or cfg.get("max_epochs", 300))
     full_val_interval = int(cfg.get("full_val_interval", 0))
     best_path = ckpt_dir / "best.ckpt"
+    start_epoch = resume_epoch + 1
+    if start_epoch > max_epochs:
+        raise ValueError(
+            f"resume checkpoint epoch {resume_epoch} is not below max_epochs {max_epochs}"
+        )
+    if args.resume_checkpoint and Path(args.resume_checkpoint).resolve() != best_path.resolve():
+        shutil.copyfile(args.resume_checkpoint, best_path)
 
-    for epoch in range(1, max_epochs + 1):
+    for epoch in range(start_epoch, max_epochs + 1):
         t0 = time.time()
         if hasattr(criterion, "set_epoch"):
             criterion.set_epoch(epoch)
@@ -329,6 +402,7 @@ def main() -> None:
             int(cfg.get("accum_steps", 1)),
             channels_last=use_channels_last,
             max_grad_norm=float(cfg.get("max_grad_norm", 0.0)),
+            amp_dtype=amp_dtype,
         )
         val_metrics = evaluate(model, val_loader, device)
         quick_val_mean = val_metrics["dice_mean"]
@@ -363,6 +437,7 @@ def main() -> None:
                     "epoch": epoch,
                     "model_state": model.state_dict(),
                     "optimizer_state": optimizer.state_dict(),
+                    "scheduler_state": scheduler.state_dict(),
                     "val_metrics": selection_metrics,
                     "quick_val_metrics": val_metrics,
                     "full_val_metrics": full_val_metrics,
@@ -389,6 +464,8 @@ def main() -> None:
                         else f"{train_details['weighted_correlation_loss']:.6f}"
                     ),
                     "" if "grad_norm" not in train_details else f"{train_details['grad_norm']:.6f}",
+                    f"{train_details.get('skipped_optimizer_steps', 0.0):.0f}",
+                    f"{train_details.get('skipped_nonfinite_losses', 0.0):.0f}",
                     f"{val_metrics['dice_WT']:.4f}",
                     f"{val_metrics['dice_TC']:.4f}",
                     f"{val_metrics['dice_ET']:.4f}",
@@ -416,6 +493,16 @@ def main() -> None:
                         ""
                         if "grad_norm" not in train_details
                         else f"grad_norm={train_details['grad_norm']:.3f} "
+                    )
+                    + (
+                        ""
+                        if train_details.get("skipped_optimizer_steps", 0.0) <= 0
+                        else f"skipped_steps={train_details['skipped_optimizer_steps']:.0f} "
+                    )
+                    + (
+                        ""
+                        if train_details.get("skipped_nonfinite_losses", 0.0) <= 0
+                        else f"skipped_losses={train_details['skipped_nonfinite_losses']:.0f} "
                     )
                 )
             )

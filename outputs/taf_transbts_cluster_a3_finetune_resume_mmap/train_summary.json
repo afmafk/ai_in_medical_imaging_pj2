@@ -1,0 +1,7 @@
+{
+  "model": "taf_transbts",
+  "best_epoch": 150,
+  "best_val_mean_dice": 0.9358705654984971,
+  "stopped_epoch": 200,
+  "checkpoint": "outputs/taf_transbts_cluster_a3_finetune_resume_mmap/checkpoints/best.ckpt"
+}
