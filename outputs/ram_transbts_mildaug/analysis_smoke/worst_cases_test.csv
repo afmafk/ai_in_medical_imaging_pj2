@@ -1,2 +1,0 @@
-patient_id,dice_WT,hd95_WT,hd95_WT_is_inf,pred_voxels_WT,gt_voxels_WT,pred_empty_WT,gt_empty_WT,dice_TC,hd95_TC,hd95_TC_is_inf,pred_voxels_TC,gt_voxels_TC,pred_empty_TC,gt_empty_TC,dice_ET,hd95_ET,hd95_ET_is_inf,pred_voxels_ET,gt_voxels_ET,pred_empty_ET,gt_empty_ET,dice_mean
-BraTS-GLI-00005-000,0.9604312730064216,2.0,False,120259,124783,False,False,0.9638425309183195,1.4142135623730951,False,47292,48041,False,False,0.9132450889487976,1.0,False,23590,23854,False,False,0.9458396309578463

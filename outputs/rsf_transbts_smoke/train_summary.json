@@ -1,7 +1,0 @@
-{
-  "model": "rsf_transbts",
-  "best_epoch": 1,
-  "best_val_mean_dice": 0.036724050397010516,
-  "stopped_epoch": 1,
-  "checkpoint": "outputs\\rsf_transbts_smoke\\checkpoints\\best.ckpt"
-}
