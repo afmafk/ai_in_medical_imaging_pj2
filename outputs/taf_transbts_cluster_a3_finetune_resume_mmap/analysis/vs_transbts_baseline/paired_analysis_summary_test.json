@@ -1,0 +1,80 @@
+{
+  "num_cases": 127,
+  "num_mean_dice_improved": 82,
+  "num_mean_dice_regressed": 45,
+  "num_mean_dice_unchanged": 0,
+  "mean_delta_dice": {
+    "WT": 0.0028241925536509624,
+    "TC": 0.006517469618063675,
+    "ET": 0.006325456972309202,
+    "mean": 0.005222373048007938
+  },
+  "mean_delta_hd95": {
+    "WT": 0.49959031617520727,
+    "TC": 0.46560623950150926,
+    "ET": -0.1358695703040004
+  },
+  "largest_mean_dice_improvements": [
+    "BraTS-GLI-00525-000",
+    "BraTS-GLI-00321-000",
+    "BraTS-GLI-00116-000",
+    "BraTS-GLI-00113-000",
+    "BraTS-GLI-00485-000",
+    "BraTS-GLI-00725-001",
+    "BraTS-GLI-00387-000",
+    "BraTS-GLI-00485-001",
+    "BraTS-GLI-00054-000",
+    "BraTS-GLI-00694-001"
+  ],
+  "largest_mean_dice_regressions": [
+    "BraTS-GLI-00621-000",
+    "BraTS-GLI-00684-000",
+    "BraTS-GLI-00612-000",
+    "BraTS-GLI-00031-001",
+    "BraTS-GLI-00555-000",
+    "BraTS-GLI-00525-001",
+    "BraTS-GLI-00675-001",
+    "BraTS-GLI-00425-000",
+    "BraTS-GLI-00021-000",
+    "BraTS-GLI-00656-000"
+  ],
+  "num_WT_dice_improved_hd95_regressed": 16,
+  "largest_WT_hd95_regressions": [
+    "BraTS-GLI-00331-000",
+    "BraTS-GLI-00555-000",
+    "BraTS-GLI-00260-000",
+    "BraTS-GLI-00608-001",
+    "BraTS-GLI-00675-001",
+    "BraTS-GLI-00611-001",
+    "BraTS-GLI-00459-000",
+    "BraTS-GLI-00258-000",
+    "BraTS-GLI-00113-000",
+    "BraTS-GLI-00684-000"
+  ],
+  "num_TC_dice_improved_hd95_regressed": 4,
+  "largest_TC_hd95_regressions": [
+    "BraTS-GLI-00733-001",
+    "BraTS-GLI-00031-001",
+    "BraTS-GLI-00684-000",
+    "BraTS-GLI-00612-000",
+    "BraTS-GLI-00621-000",
+    "BraTS-GLI-00172-000",
+    "BraTS-GLI-00604-000",
+    "BraTS-GLI-00725-000",
+    "BraTS-GLI-00525-001",
+    "BraTS-GLI-00425-000"
+  ],
+  "num_ET_dice_improved_hd95_regressed": 5,
+  "largest_ET_hd95_regressions": [
+    "BraTS-GLI-00733-001",
+    "BraTS-GLI-00031-001",
+    "BraTS-GLI-00684-000",
+    "BraTS-GLI-00621-000",
+    "BraTS-GLI-00331-000",
+    "BraTS-GLI-00021-001",
+    "BraTS-GLI-00656-000",
+    "BraTS-GLI-00612-000",
+    "BraTS-GLI-00425-000",
+    "BraTS-GLI-00525-001"
+  ]
+}

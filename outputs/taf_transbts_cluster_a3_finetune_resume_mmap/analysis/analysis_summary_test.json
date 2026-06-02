@@ -1,0 +1,32 @@
+{
+  "model": "taf_transbts",
+  "split": "test",
+  "num_cases": 127,
+  "num_inf_hd95_WT": 0,
+  "num_inf_hd95_TC": 0,
+  "num_inf_hd95_ET": 0,
+  "worst_mean_dice_cases": [
+    "BraTS-GLI-00621-000",
+    "BraTS-GLI-00331-000",
+    "BraTS-GLI-00525-001",
+    "BraTS-GLI-00021-000",
+    "BraTS-GLI-00684-000",
+    "BraTS-GLI-00321-000",
+    "BraTS-GLI-00116-000",
+    "BraTS-GLI-00675-001",
+    "BraTS-GLI-00258-000",
+    "BraTS-GLI-00485-000"
+  ],
+  "worst_wt_hd95_cases": [
+    "BraTS-GLI-00733-001",
+    "BraTS-GLI-00331-000",
+    "BraTS-GLI-00555-000",
+    "BraTS-GLI-00656-000",
+    "BraTS-GLI-00350-000",
+    "BraTS-GLI-00675-001",
+    "BraTS-GLI-00260-000",
+    "BraTS-GLI-00242-000",
+    "BraTS-GLI-00537-000",
+    "BraTS-GLI-00258-000"
+  ]
+}

@@ -1,0 +1,9 @@
+patient_id,pred_WT_components,pred_WT_largest_component_voxels,pred_WT_non_largest_component_voxels,gt_WT_components,gt_WT_largest_component_voxels,gt_WT_non_largest_component_voxels,pred_TC_components,pred_TC_largest_component_voxels,pred_TC_non_largest_component_voxels,gt_TC_components,gt_TC_largest_component_voxels,gt_TC_non_largest_component_voxels,pred_ET_components,pred_ET_largest_component_voxels,pred_ET_non_largest_component_voxels,gt_ET_components,gt_ET_largest_component_voxels,gt_ET_non_largest_component_voxels
+BraTS-GLI-00621-000,8,17944,593,8,26821,14,1,351,0,7,3779,13,1,351,0,7,3779,13
+BraTS-GLI-00331-000,12,8034,1235,4,26802,4,12,1008,29,3,7509,7,12,1008,29,2,398,8
+BraTS-GLI-00525-001,6,99098,82,3,103063,20,6,13742,1443,4,60472,3,4,731,750,15,12818,23
+BraTS-GLI-00021-000,22,54186,2978,4,89256,4,22,25144,63,1,7641,0,42,5593,3595,1,6769,0
+BraTS-GLI-00684-000,3,18525,204,1,23329,0,5,1395,152,3,1837,1088,5,1395,152,3,1837,1088
+BraTS-GLI-00733-001,30,6431,4848,1,7048,0,2,4604,569,1,4753,0,2,4604,569,1,4753,0
+BraTS-GLI-00350-000,3,60095,4256,1,60060,0,1,19470,0,1,19875,0,1,13452,0,1,14501,0
+BraTS-GLI-00675-001,1,1,0,1,7089,0,0,0,0,0,0,0,0,0,0,0,0,0
