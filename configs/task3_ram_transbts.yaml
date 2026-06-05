@@ -1,6 +1,6 @@
 # Task 3: RAM-TransBTS with region-aware modality fusion and mild augmentation
-data_root: outputs_task1/processed_3d
-metadata_path: outputs_task1/metadata.json
+data_root: outputs_task1/outputs_task1/processed_3d
+metadata_path: outputs_task1/outputs_task1/metadata.json
 splits_path: splits_patient_seed42.json
 
 split_ratios: [0.7, 0.1, 0.2]

@@ -1,0 +1,7 @@
+{
+  "model": "multimodal_unet",
+  "best_epoch": 250,
+  "best_val_mean_dice": 0.9311862268733567,
+  "stopped_epoch": 300,
+  "checkpoint": "outputs/multimodal_unet_attention/checkpoints/best.ckpt"
+}

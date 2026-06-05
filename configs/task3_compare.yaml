@@ -1,7 +1,7 @@
 # Task 3: BraTS-style protocol
 # Train: random 96³ patches | Val (early stop): center patch | Test/report: sliding-window full volume
-data_root: outputs_task1/processed_3d
-metadata_path: outputs_task1/metadata.json
+data_root: outputs_task1/outputs_task1/processed_3d
+metadata_path: outputs_task1/outputs_task1/metadata.json
 splits_path: splits_patient_seed42.json
 
 split_ratios: [0.7, 0.1, 0.2]

@@ -13,9 +13,16 @@ def dice_per_class(
     num_classes: int,
     eps: float = 1e-6,
 ) -> torch.Tensor:
-    """Mean Dice over foreground classes 1..C-1."""
+    """Mean Dice over foreground classes 1..C-1. Supports 3D (B,D,H,W) or 2D (B,H,W) targets."""
+    if target.ndim == 4 and target.shape[1] == 1:
+        target = target.squeeze(1)
     probs = F.softmax(logits, dim=1)
-    target_oh = F.one_hot(target.clamp(0, num_classes - 1), num_classes).permute(0, 4, 1, 2, 3).float()
+    tgt = target.clamp(0, num_classes - 1)
+    target_oh = F.one_hot(tgt, num_classes)
+    if target.ndim == 3:
+        target_oh = target_oh.permute(0, 3, 1, 2).float()
+    else:
+        target_oh = target_oh.permute(0, 4, 1, 2, 3).float()
     dices = []
     for c in range(1, num_classes):
         pred_c = probs[:, c]
@@ -40,6 +47,8 @@ class DiceCELoss(nn.Module):
         self.ce = nn.CrossEntropyLoss()
 
     def forward(self, logits: torch.Tensor, target: torch.Tensor) -> tuple[torch.Tensor, dict]:
+        if target.ndim == 4 and target.shape[1] == 1:
+            target = target.squeeze(1)
         ce = self.ce(logits, target)
         dice_loss = 1.0 - dice_per_class(logits, target, self.num_classes)
         loss = self.ce_weight * ce + self.dice_weight * dice_loss

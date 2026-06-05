@@ -86,7 +86,7 @@ def main() -> None:
         not args.patch_only and bool(cfg.get("eval_sliding_window", True)) and not cfg.get("use_full_volume", False)
     )
 
-    model_cfg = cfg.get(args.model)
+    model_cfg = cfg.get(args.model) or cfg.get("transbts_fusion")
     model = build_model(
         args.model,
         in_channels=4,

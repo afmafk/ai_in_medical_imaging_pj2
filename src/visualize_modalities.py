@@ -56,7 +56,7 @@ def main() -> None:
     args = parser.parse_args()
 
     cfg = load_config(args.config)
-    data_root = Path(args.data_root or cfg.get("data_root", "outputs_task1/outputs_task1/processed_2d"))
+    data_root = Path(args.data_root or cfg.get("data_root", "outputs_task1/outputs_task1/processed_3d"))
     slice_path = data_root / args.patient_id / f"slice_{args.z_slice:03d}.npz"
     if not slice_path.exists():
         raise FileNotFoundError(f"Slice not found: {slice_path}")

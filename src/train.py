@@ -267,7 +267,7 @@ def main() -> None:
             f"slice_threads={ds_kw['slice_load_threads']}"
         )
 
-    model_cfg = cfg.get(args.model)
+    model_cfg = cfg.get(args.model) or cfg.get("transbts_fusion")
     model = build_model(
         args.model,
         in_channels=4,

@@ -13,7 +13,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from config import PROJECT_ROOT as ROOT, load_config
 
-DEFAULT_MODELS = ("attention_unet", "transbts", "swinunetr")
+DEFAULT_MODELS = ("multimodal_unet", "attention_unet", "transbts", "swinunetr")
 
 
 def main() -> None:
@@ -39,20 +39,35 @@ def main() -> None:
     default_config = str(ROOT / "configs" / "task3_compare.yaml")
     for model in models:
         config_path = args.config
-        if config_path is None and model == "swinunetr":
-            config_path = str(ROOT / "configs" / "task3_swinunetr.yaml")
+        if config_path is None:
+            config_map = {
+                "swinunetr": ROOT / "configs" / "task3_swinunetr.yaml",
+                "transbts_mm_msca_af": ROOT / "configs" / "task3_transbts_mm_msca_af.yaml",
+                "transbts_tri_attention": ROOT / "configs" / "task3_transbts_tri_attention.yaml",
+            }
+            config_path = str(config_map.get(model, default_config))
         config_path = config_path or default_config
 
-        cmd = [
-            sys.executable,
-            str(ROOT / "src" / "evaluate.py"),
-            "--model",
-            model,
-            "--split",
-            args.split,
-            "--config",
-            config_path,
-        ]
+        if model == "multimodal_unet":
+            cmd = [
+                sys.executable,
+                str(ROOT / "src" / "evaluate_2d.py"),
+                "--split",
+                args.split,
+                "--config",
+                str(ROOT / "configs" / "task2_multimodal_unet.yaml"),
+            ]
+        else:
+            cmd = [
+                sys.executable,
+                str(ROOT / "src" / "evaluate.py"),
+                "--model",
+                model,
+                "--split",
+                args.split,
+                "--config",
+                config_path,
+            ]
         if args.hd95:
             cmd.append("--hd95")
         if args.max_patients:

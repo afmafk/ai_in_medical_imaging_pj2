@@ -59,6 +59,31 @@ def get_patient_depth_from_root(data_root: Path, patient_id: str) -> int:
     return get_patient_depth(data_root / patient_id)
 
 
+def load_axial_slice_from_root(
+    data_root: str | Path,
+    patient_id: str,
+    z: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Load one axial slice as image (4,H,W), seg (H,W) from 3d or 2d layout."""
+    root = Path(data_root)
+    if _has_mmap_volume(root, patient_id):
+        image = np.load(_mmap_image_path(root, patient_id), mmap_mode="r")
+        seg = np.load(_mmap_seg_path(root, patient_id), mmap_mode="r")
+        return (
+            np.asarray(image[:, :, :, z], dtype=np.float32),
+            np.asarray(seg[:, :, z], dtype=np.uint8),
+        )
+    volume_path = _volume_path(root, patient_id)
+    if volume_path.exists():
+        with np.load(volume_path) as data:
+            return (
+                data["image"][:, :, :, z].astype(np.float32),
+                data["seg"][:, :, z].astype(np.uint8),
+            )
+    data = np.load(_slice_path(root / patient_id, z))
+    return data["image"].astype(np.float32), data["seg"].astype(np.uint8)
+
+
 def _load_one_slice(
     patient_dir: Path,
     zi: int,

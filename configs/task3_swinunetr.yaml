@@ -1,6 +1,6 @@
-# SwinUNETR â€” same train/eval protocol as task3_compare; smaller feature_size for 16GB GPU
-data_root: outputs_task1/processed_3d
-metadata_path: outputs_task1/metadata.json
+# SwinUNETR â€?same train/eval protocol as task3_compare; smaller feature_size for 16GB GPU
+data_root: outputs_task1/outputs_task1/processed_3d
+metadata_path: outputs_task1/outputs_task1/metadata.json
 splits_path: splits_patient_seed42.json
 
 split_ratios: [0.7, 0.1, 0.2]
