@@ -1,0 +1,15 @@
+{
+  "checkpoint": "unet_multiclass_t2f_t1c_t2w\\best_model.pt",
+  "run_config": "unet_multiclass_t2f_t1c_t2w\\run_config.json",
+  "target_mode": "multiclass",
+  "modalities": [
+    "t2f",
+    "t1c",
+    "t2w"
+  ],
+  "test_loss": 0.22240230880668546,
+  "test_dice_wt": 0.9368948786566773,
+  "test_dice_tc": 0.9518776121004716,
+  "test_dice_et": 0.8996935661588705,
+  "test_dice_mean": 0.9294886856386732
+}

@@ -1,0 +1,52 @@
+[
+  {
+    "patient_id": "BraTS-GLI-00005-000",
+    "slice_idx": 106,
+    "visualization": "evaluation_outputs\\multiclass_all_modalities\\visuals_selected_patients\\BraTS-GLI-00005-000_slice_106.png"
+  },
+  {
+    "patient_id": "BraTS-GLI-00019-000",
+    "slice_idx": 65,
+    "visualization": "evaluation_outputs\\multiclass_all_modalities\\visuals_selected_patients\\BraTS-GLI-00019-000_slice_065.png"
+  },
+  {
+    "patient_id": "BraTS-GLI-00021-000",
+    "slice_idx": 63,
+    "visualization": "evaluation_outputs\\multiclass_all_modalities\\visuals_selected_patients\\BraTS-GLI-00021-000_slice_063.png"
+  },
+  {
+    "patient_id": "BraTS-GLI-00021-001",
+    "slice_idx": 67,
+    "visualization": "evaluation_outputs\\multiclass_all_modalities\\visuals_selected_patients\\BraTS-GLI-00021-001_slice_067.png"
+  },
+  {
+    "patient_id": "BraTS-GLI-00022-000",
+    "slice_idx": 102,
+    "visualization": "evaluation_outputs\\multiclass_all_modalities\\visuals_selected_patients\\BraTS-GLI-00022-000_slice_102.png"
+  },
+  {
+    "patient_id": "BraTS-GLI-00022-001",
+    "slice_idx": 89,
+    "visualization": "evaluation_outputs\\multiclass_all_modalities\\visuals_selected_patients\\BraTS-GLI-00022-001_slice_089.png"
+  },
+  {
+    "patient_id": "BraTS-GLI-00031-000",
+    "slice_idx": 95,
+    "visualization": "evaluation_outputs\\multiclass_all_modalities\\visuals_selected_patients\\BraTS-GLI-00031-000_slice_095.png"
+  },
+  {
+    "patient_id": "BraTS-GLI-00031-001",
+    "slice_idx": 90,
+    "visualization": "evaluation_outputs\\multiclass_all_modalities\\visuals_selected_patients\\BraTS-GLI-00031-001_slice_090.png"
+  },
+  {
+    "patient_id": "BraTS-GLI-00032-000",
+    "slice_idx": 83,
+    "visualization": "evaluation_outputs\\multiclass_all_modalities\\visuals_selected_patients\\BraTS-GLI-00032-000_slice_083.png"
+  },
+  {
+    "patient_id": "BraTS-GLI-00032-001",
+    "slice_idx": 83,
+    "visualization": "evaluation_outputs\\multiclass_all_modalities\\visuals_selected_patients\\BraTS-GLI-00032-001_slice_083.png"
+  }
+]
