@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.5.15)  6 JUN 2026 15:12
+This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.5.15)  6 JUN 2026 16:14
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -906,46 +906,16 @@ e
  [2]
 File: ../fig/model/TransBTS_lite.png Graphic file (type bmp)
 <../fig/model/TransBTS_lite.png>
+File: ../fig/case/BraTS-GLI-00124-000_basic_compare.png Graphic file (type bmp)
+
+<../fig/case/BraTS-GLI-00124-000_basic_compare.png>
  [3]
 File: ../fig/model/MSA.png Graphic file (type bmp)
 <../fig/model/MSA.png>
  [4]
-File: ../fig/model/RAM.png Graphic file (type bmp)
-<../fig/model/RAM.png>
-File: ../fig/model/RAMS.png Graphic file (type bmp)
-<../fig/model/RAMS.png>
-File: ../fig/model/rsf.png Graphic file (type bmp)
-<../fig/model/rsf.png>
- [5]
-File: ../../outputs/rsf_transbts_regionfusion_rerun/analysis/worst_case_figures
-_test/BraTS-GLI-00321-000.png Graphic file (type bmp)
-<../../outputs/rsf_transbts_regionfusion_rerun/analysis/worst_case_figures_test
-/BraTS-GLI-00321-000.png>
-File: ../../outputs/rsf_transbts_regionfusion_rerun/analysis/worst_case_figures
-_test/BraTS-GLI-00733-001.png Graphic file (type bmp)
-<../../outputs/rsf_transbts_regionfusion_rerun/analysis/worst_case_figures_test
-/BraTS-GLI-00733-001.png>
- [6]
-File: ../fig/model/taf_transbts_a3.png Graphic file (type bmp)
-<../fig/model/taf_transbts_a3.png>
- [7] [8]
-File: ../../outputs/taf_transbts_cluster_a3_finetune_resume_mmap/analysis/multi
-modal_badcase_figures_test/BraTS-GLI-00621-000.png Graphic file (type bmp)
-<../../outputs/taf_transbts_cluster_a3_finetune_resume_mmap/analysis/multimodal
-_badcase_figures_test/BraTS-GLI-00621-000.png>
-File: ../../outputs/taf_transbts_cluster_a3_finetune_resume_mmap/analysis/multi
-modal_badcase_figures_test/BraTS-GLI-00331-000.png Graphic file (type bmp)
-<../../outputs/taf_transbts_cluster_a3_finetune_resume_mmap/analysis/multimodal
-_badcase_figures_test/BraTS-GLI-00331-000.png>
-File: ../../outputs/taf_transbts_cluster_a3_finetune_resume_mmap/analysis/multi
-modal_badcase_figures_test/BraTS-GLI-00525-001.png Graphic file (type bmp)
-<../../outputs/taf_transbts_cluster_a3_finetune_resume_mmap/analysis/multimodal
-_badcase_figures_test/BraTS-GLI-00525-001.png>
-File: ../../outputs/taf_transbts_cluster_a3_finetune_resume_mmap/analysis/worst
-_case_figures_test/BraTS-GLI-00350-000.png Graphic file (type bmp)
-<../../outputs/taf_transbts_cluster_a3_finetune_resume_mmap/analysis/worst_case
-_figures_test/BraTS-GLI-00350-000.png>
- [9] [10] [11] (./report.aux)
+File: ../fig/case/BraTS-GLI-00124-000_msa_z065.png Graphic file (type bmp)
+<../fig/case/BraTS-GLI-00124-000_msa_z065.png>
+ [5] [6] [7] [8] [9] (./report.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2022/07/14>
@@ -954,12 +924,12 @@ Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: 83B0CD61E64B8DB599E1A83727C93F92;2697.
  ) 
 Here is how much of TeX's memory you used:
- 15653 strings out of 467992
- 357014 string characters out of 5429010
- 794038 words of memory out of 5000000
- 44329 multiletter control sequences out of 15000+600000
+ 15580 strings out of 467992
+ 350778 string characters out of 5429010
+ 794152 words of memory out of 5000000
+ 44266 multiletter control sequences out of 15000+600000
  633623 words of font info for 86 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 93i,10n,111p,404b,421s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 93i,10n,111p,404b,397s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on report.pdf (11 pages).
+Output written on report.pdf (9 pages).

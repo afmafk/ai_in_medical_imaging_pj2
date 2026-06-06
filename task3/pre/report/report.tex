@@ -111,6 +111,15 @@ ResConv3D 内部包含两层 $3\times3\times3$ Conv3d、InstanceNorm3d 和 Leaky
 
 在统一 full-volume sliding-window 测试下，TransBTS baseline 的 Mean Dice 为 0.8955，略高于 3D multimodal U-Net fresh300 的 0.8950。差异不大，但 TransBTS 的 TC Dice 从 0.8997 提高到 0.9022，ET Dice 从 0.8681 提高到 0.8711，说明 Transformer bottleneck 对较细区域有一定帮助。这个结果使 TransBTS 成为后续融合模块的主干。
 
+病例 BraTS-GLI-00124-000 提供了一个更具体的观察。图~\ref{fig:case00124_basic} 中，FLAIR 上肿瘤信号非常突出，Ground truth 包含外围水肿、肿瘤核心和增强区域的层次结构；Attention U-Net、TransBTS 和 SwinUNETR 都能定位主体肿瘤，但预测更接近单一大块区域，外围 ED 与内部 NCR/ET 的层次恢复不足。这个病例说明，三维主干能够找到病灶位置，模态信息和区域结构仍需要更细的融合机制。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{../fig/case/BraTS-GLI-00124-000_basic_compare.png}
+\caption{BraTS-GLI-00124-000 的基础模型对比。该切片中 FLAIR 信号清楚，但基础 3D 模型对 ED/NCR/ET 的区域层次恢复不足，为后续模态融合设计提供了定性动机。}
+\label{fig:case00124_basic}
+\end{figure}
+
 \section{多模态融合探索：从输入注意力到受控特征融合}
 
 TransBTS 仍然把四个模态作为普通输入通道处理。结合表~\ref{tab:contrast} 和 Task 2 模态实验，四个 MRI 序列的贡献明显不同：\texttt{t2f} 对 WT/TC/ET 的归一化对比度均最高，\texttt{t1c} 对 TC/ET 有明确价值，\texttt{t1n} 对肿瘤区域的对比度较弱。可视化检查中也能看到部分病灶在某些序列中更清楚。由此，后续实验围绕一个问题展开：模型能否在不同病例、不同空间位置上自适应选择模态，减少固定 concat 对弱模态和冗余模态的依赖。
@@ -129,19 +138,17 @@ MSA-TransBTS 是第一步轻量尝试。设计上尽量不改变 TransBTS 主干
 
 结果支持了部分假设，也暴露了局限。MSA 的 WT Dice 为 0.9169，高于 TransBTS baseline 的 0.9132，WT HD95 也从 4.91 降到 4.74；但 TC Dice 从 0.9022 降到 0.8938，Mean Dice 为 0.8939。这个模式说明输入端统一调节四模态对大范围 WT 有帮助，但对 TC/ET 这类小而细的区域缺少区域区分能力。下一轮实验因此把“区域”显式加入融合。
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\linewidth]{../fig/case/BraTS-GLI-00124-000_msa_z065.png}
+\caption{MSA-TransBTS 在 BraTS-GLI-00124-000 上的同切片结果。该图用于观察输入端模态-空间注意力对明显 FLAIR 病灶的响应。}
+\end{figure}
+
 \subsection{RAM 与 RAMS：显式区域导向融合}
 
 RAM-TransBTS 的出发点来自 MSA 的结果：如果 WT 得到改善而 TC 下降，说明一个全局模态权重很难同时服务三个临床区域。RegionAwareModalityFusion3D 因此为 WT、TC、ET 分别学习一组四模态 softmax 权重。具体实现为：根据四模态 mean/max 统计，经 MLP 输出 $3\times4$ 个权重，生成三个 region-oriented fused channels，再与原始四模态拼接为 7 通道输入 TransBTS。
 
 RAM 的 worst-case 结果很快暴露了稳定性问题。在 BraTS-GLI-00675-001 中，RAM 的 WT 预测为空，\texttt{pred\_empty\_WT=True}，WT HD95 被记为 999.0；总体 WT HD95 均值达到 12.39。这个失败不像普通边界偏差，更接近区域响应被错误压制。RAMS-TransBTS 因此在 RAM 后加入 SharedSpatialAttention3D，用跨通道 mean/max 和 $7\times7\times7$ Conv3d 学习共享空间 scale，希望在保留区域导向融合的同时抑制不稳定空间响应。
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.48\linewidth]{../fig/model/RAM.png}
-\hfill
-\includegraphics[width=0.48\linewidth]{../fig/model/RAMS.png}
-\caption{RAM 与 RAMS：RAM 显式生成 WT/TC/ET 导向的融合通道；RAMS 在此基础上加入共享空间注意力。}
-\end{figure}
 
 RAMS 的 WT HD95 从 12.39 降到 4.62，说明共享空间注意力确实缓解了 RAM 中的极端 WT 错误；Mean Dice 仍只有 0.8924，TC/ET 收益不稳定。这个结果推动我们继续前移融合位置：只在输入层生成三个区域通道，可能不足以支持深层特征中的区域判别。
 
@@ -151,22 +158,7 @@ RSF-TransBTS 的设计目标是解决 RAM/RAMS 中“融合发生得太早、区
 
 这一步的假设很直接：TC/ET 体素少，随机 patch 中出现频率低；通过区域平衡采样和辅助监督，模型应当更频繁看到小区域，并在浅层特征上学习区域相关的模态组合。
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.92\linewidth]{../fig/model/rsf.png}
-\caption{RSF-TransBTS：区域监督的 feature-level 多模态融合。该方向提升了病灶响应敏感性，但测试泛化不稳定。}
-\end{figure}
-
-测试结果与设计初衷出现明显偏差。RSF 的 Mean Dice 只有 0.8805，WT/TC/ET HD95 分别为 10.10、5.96、5.81。worst cases 中，BraTS-GLI-00321-000 的 WT/TC/ET HD95 分别达到 80.73、109.24、111.77；BraTS-GLI-00733-001 的 WT HD95 为 90.72。图~\ref{fig:rsf_badcase} 展示了这种远端假阳性和不连续预测。由此得到的经验是：区域监督和病灶采样提高了敏感性，同时也放大了对疑似病灶的响应。后续 TAF 设计减少对区域辅助头的依赖，优先约束融合的数值形式。
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.48\linewidth]{../../outputs/rsf_transbts_regionfusion_rerun/analysis/worst_case_figures_test/BraTS-GLI-00321-000.png}
-\hfill
-\includegraphics[width=0.48\linewidth]{../../outputs/rsf_transbts_regionfusion_rerun/analysis/worst_case_figures_test/BraTS-GLI-00733-001.png}
-\caption{RSF-TransBTS 的代表性失败病例。强区域监督提高了病灶响应，但在部分病例中产生远端假阳性和 HD95 tail error。}
-\label{fig:rsf_badcase}
-\end{figure}
+测试结果与设计初衷出现明显偏差。RSF 的 Mean Dice 只有 0.8805，WT/TC/ET HD95 分别为 10.10、5.96、5.81。worst cases 中，BraTS-GLI-00321-000 的 WT/TC/ET HD95 分别达到 80.73、109.24、111.77；BraTS-GLI-00733-001 的 WT HD95 为 90.72。这类结果对应远端假阳性和不连续预测。由此得到的经验是：区域监督和病灶采样提高了敏感性，同时也放大了对疑似病灶的响应。后续 TAF 设计减少对区域辅助头的依赖，优先约束融合的数值形式。
 
 \section{最终方案：TAF-TransBTS A3}
 
@@ -183,12 +175,6 @@ TAF-TransBTS A3 的结构如下：
 \end{itemize}
 
 与 RSF 中的 sigmoid scale 相比，softmax 权重不会同时放大所有模态响应。每个位置的输出由四个模态竞争得到，这与前面观察到的“某些病例只在部分序列中表现清楚”相吻合，也能限制远端假阳性在深层特征中被持续增强。
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.95\linewidth]{../fig/model/taf_transbts_a3.png}
-\caption{TAF-TransBTS A3：四模态独立编码，并在多尺度 skip 与 deepest feature 上进行 softmax-controlled dual attention fusion。}
-\end{figure}
 
 \section{实验结果与 HD95 分析}
 
@@ -267,22 +253,6 @@ BraTS-GLI-00684-000 & 0.760 & 0.465 & 0.465 & 0.563 & 小 peripheral lesion，TC
 \bottomrule
 \end{tabular}
 \end{table}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.48\linewidth]{../../outputs/taf_transbts_cluster_a3_finetune_resume_mmap/analysis/multimodal_badcase_figures_test/BraTS-GLI-00621-000.png}
-\hfill
-\includegraphics[width=0.48\linewidth]{../../outputs/taf_transbts_cluster_a3_finetune_resume_mmap/analysis/multimodal_badcase_figures_test/BraTS-GLI-00331-000.png}
-\caption{代表性 bad cases：左侧为薄 TC/ET 漏分，右侧为低对比 WT 与远端假阳性。}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.48\linewidth]{../../outputs/taf_transbts_cluster_a3_finetune_resume_mmap/analysis/multimodal_badcase_figures_test/BraTS-GLI-00525-001.png}
-\hfill
-\includegraphics[width=0.48\linewidth]{../../outputs/taf_transbts_cluster_a3_finetune_resume_mmap/analysis/worst_case_figures_test/BraTS-GLI-00350-000.png}
-\caption{左：WT Dice 很高但 ET rim 漏分，说明 WT 不能代表全部临床区域。右：Mean Dice 可达 0.9564，但 WT HD95 为 39.61，说明 Dice 会掩盖远端边界错误。}
-\end{figure}
 
 相对 TransBTS baseline，staged TAF A3 在 82/127 个病例上提升 Mean Dice。提升最大的病例包括 BraTS-GLI-00525-000（+0.189）、BraTS-GLI-00321-000（+0.181）、BraTS-GLI-00116-000（+0.157）、BraTS-GLI-00113-000（+0.128）和 BraTS-GLI-00485-000（+0.068）。后续报告可补充这些 improved cases 的可视化图，以展示 TAF 对 TC/ET 的修复效果。\\
 \todo{建议从 paired case metrics 中挑选 BraTS-GLI-00525-000 或 BraTS-GLI-00321-000，生成 baseline-vs-TAF 对比图并复制到 \texttt{task3/pre/fig/case/}。}
